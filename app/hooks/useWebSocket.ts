@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useEffect } from 'react';
 import { useVoiceAgent } from '../contexts/VoiceAgentContext';
+import { config } from '../config';
 import type { WSMessage } from '../types';
 
 interface UseWebSocketOptions {
@@ -24,11 +25,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const websocketRef = useRef<WebSocket | null>(null);
   const { onAudioChunk, onAudioComplete, onAgentResponse, onError } = options;
 
-  const getWsUrl = useCallback(() => {
-    const wsProtocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = typeof window !== 'undefined' ? window.location.host : '';
-    return `${wsProtocol}//${host}/agent/ws`;
-  }, []);
+  // WebSocket URL from config (uses environment variables)
+  const WS_URL = config.wsUrl;
 
   const connect = useCallback(() => {
     if (!jwtToken) {
@@ -37,7 +35,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       return;
     }
 
-    const url = `${getWsUrl()}?token=${jwtToken}`;
+    const url = `${WS_URL}?token=${jwtToken}`;
     setStatusText('Connecting...');
     setConnectionStatus('connecting');
 
@@ -106,7 +104,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     };
   }, [
     jwtToken,
-    getWsUrl,
+    WS_URL,
     setConnectionStatus,
     setSphereState,
     addMessage,

@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { useVoiceAgent } from '../contexts/VoiceAgentContext';
+import { config } from '../config';
 import type { STTConfig, STTMessage } from '../types';
 
 interface UseSTTOptions {
@@ -33,9 +34,7 @@ export function useSTT(options: UseSTTOptions = {}) {
   // Fetch STT token from backend
   const fetchSTTToken = useCallback(async (): Promise<boolean> => {
     try {
-      const apiUrl = typeof window !== 'undefined' ? window.location.origin : '';
-
-      const response = await fetch(`${apiUrl}/agent/stt/token`, {
+      const response = await fetch(config.sttTokenUrl, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${jwtToken}`,
