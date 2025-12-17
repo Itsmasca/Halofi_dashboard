@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Halofi Voice Agent</title>
+    <!-- Prevent favicon 404 error -->
+    <link rel="icon" href="data:,">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Token Setup Screen */
+        .setup-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .logo {
+            margin-bottom: 20px;
+        }
+
+        .logo-text {
+            font-size: 48px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .setup-container h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .setup-container p {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: monospace;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success-message {
+            background: #efe;
+            color: #3c3;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .help-text {
+            font-size: 13px;
+            color: #999;
+            margin-top: 10px;
+        }
+
+        .help-text code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        /* Main App */
+        .app-container {
+            display: none;
+            text-align: center;
+            z-index: 10;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .app-container.active {
+            display: block;
+        }
+
+        .sphere-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 0 auto 30px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .sphere {
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3),
+                        inset 0 -10px 40px rgba(0, 0, 0, 0.2),
+                        inset 0 10px 40px rgba(255, 255, 255, 0.1);
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+
+        .sphere:hover {
+            transform: scale(1.05);
+        }
+
+        .sphere.listening {
+            animation: pulse-listening 1.5s ease-in-out infinite;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            box-shadow: 0 0 0 0 rgba(56, 239, 125, 0.7),
+                        0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .sphere.speaking {
+            animation: pulse-speaking 0.6s ease-in-out infinite;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .sphere.thinking {
+            animation: rotate-thinking 2s linear infinite;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        @keyframes pulse-listening {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(56, 239, 125, 0.7),
+                            0 20px 60px rgba(0, 0, 0, 0.3);
+            }
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 0 0 20px rgba(56, 239, 125, 0),
+                            0 20px 60px rgba(0, 0, 0, 0.3);
+            }
+        }
+
+        @keyframes pulse-speaking {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        @keyframes rotate-thinking {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .status-text {
+            color: white;
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 10px;
+            min-height: 25px;
+        }
+
+        .transcript {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 600px;
+            margin: 20px auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            min-height: 100px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .transcript-item {
+            margin: 10px 0;
+            text-align: left;
+        }
+
+        .user-message {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .agent-message {
+            color: #764ba2;
+            font-weight: 500;
+            margin-top: 5px;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px 20px;
+            border-radius: 50px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .connection-status.connected {
+            color: #38ef7d;
+        }
+
+        .connection-status.disconnected {
+            color: #f5576c;
+        }
+
+        .settings-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px 20px;
+            border-radius: 50px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #667eea;
+            transition: all 0.3s;
+        }
+
+        .settings-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .audio-visualizer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .audio-visualizer canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .hint {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Live transcript styles */
+        .live-transcript-item {
+            animation: fadeIn 0.2s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .listening-indicator {
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .final-text {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .interim-text {
+            color: #667eea;
+            opacity: 0.6;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <!-- Token Setup Screen -->
+    <div class="setup-container" id="setupContainer">
+        <div class="logo">
+            <div class="logo-text">Halofi</div>
+        </div>
+
+        <h1>Voice Agent</h1>
+        <p>Enter your JWT token to connect to the voice agent</p>
+
+        <div class="error-message" id="setupError"></div>
+        <div class="success-message" id="setupSuccess"></div>
+
+        <form id="setupForm" onsubmit="handleSetup(event)">
+            <div class="form-group">
+                <label for="jwtToken">JWT Token</label>
+                <input
+                    type="text"
+                    id="jwtToken"
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    required
+                >
+                <div class="help-text">
+                    Get your token from Postman: <code>POST /auth/login</code>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary" id="setupButton">
+                Connect
+            </button>
+        </form>
+    </div>
+
+    <!-- Main App (Hidden initially) -->
+    <div class="app-container" id="appContainer">
+        <div class="connection-status disconnected" id="connectionStatus">
+            ● Disconnected
+        </div>
+
+        <button class="settings-btn" onclick="showSetup()">
+            Change Token
+        </button>
+
+        <div class="status-text" id="statusText">Click the sphere to start</div>
+
+        <div class="sphere-container" id="sphereContainer">
+            <div class="sphere" id="sphere">
+                <div class="audio-visualizer">
+                    <canvas id="visualizer" width="200" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="hint">Click sphere to talk • Auto-sends after 1.5s silence • Click again to send now</div>
+
+        <div class="transcript" id="transcript">
+            <div style="color: #999; text-align: center;">Conversation will appear here...</div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration - Use relative URLs since served from same server
+        const API_URL = window.location.origin;
+        const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const WS_URL = `${WS_PROTOCOL}//${window.location.host}/agent/ws`;
+
+        // Global state
+        let websocket = null;
+        let sttWebsocket = null;  // ElevenLabs STT WebSocket
+        let audioContext = null;
+        let mediaStream = null;
+        let audioWorkletNode = null;
+        let isListening = false;
+        let isSpeaking = false;
+        let currentTranscript = '';
+        let audioQueue = [];
+        let isPlayingAudio = false;
+        let jwtToken = null;
+        let sttToken = null;  // ElevenLabs STT token
+        let sttConfig = null;  // ElevenLabs STT configuration
+        let silenceTimer = null;
+        let finalTranscriptReceived = false;
+        const SILENCE_DELAY = 1500; // 1.5 seconds of silence before auto-send
+
+        // Check if user has token saved
+        window.addEventListener('load', () => {
+            console.log('🚀 Halofi Voice Agent Starting...');
+            console.log('📍 Protocol:', window.location.protocol);
+            console.log('📍 Hostname:', window.location.hostname);
+            console.log('🔊 Audio API Support:', 'AudioContext' in window || 'webkitAudioContext' in window);
+            console.log('🎤 ElevenLabs STT: Enabled');
+            console.log('🔌 WebSocket Support:', 'WebSocket' in window);
+
+            checkAuth();
+            initAudioContext();
+        });
+
+        // Check authentication status
+        function checkAuth() {
+            const token = localStorage.getItem('halofi_jwt');
+
+            if (token) {
+                jwtToken = token;
+                document.getElementById('jwtToken').value = token;
+                showApp();
+                connectWebSocket();
+            } else {
+                showSetup();
+            }
+        }
+
+        // Handle setup
+        function handleSetup(event) {
+            event.preventDefault();
+
+            const token = document.getElementById('jwtToken').value.trim();
+            const setupButton = document.getElementById('setupButton');
+            const errorDiv = document.getElementById('setupError');
+            const successDiv = document.getElementById('setupSuccess');
+
+            // Clear messages
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+
+            if (!token) {
+                errorDiv.textContent = 'Please enter a valid JWT token';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            // Save token
+            localStorage.setItem('halofi_jwt', token);
+            jwtToken = token;
+
+            // Show success
+            successDiv.textContent = 'Token saved! Connecting...';
+            successDiv.style.display = 'block';
+            setupButton.disabled = true;
+
+            // Connect
+            setTimeout(() => {
+                showApp();
+                connectWebSocket();
+                setupButton.disabled = false;
+            }, 1000);
+        }
+
+        // Show setup screen
+        function showSetup() {
+            document.getElementById('setupContainer').classList.remove('hidden');
+            document.getElementById('appContainer').classList.remove('active');
+        }
+
+        // Show app screen
+        function showApp() {
+            document.getElementById('setupContainer').classList.add('hidden');
+            document.getElementById('appContainer').classList.add('active');
+        }
+
+        // Fetch STT token from backend
+        async function fetchSTTToken() {
+            try {
+                const response = await fetch(`${API_URL}/agent/stt/token`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${jwtToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to get STT token: ${response.status}`);
+                }
+
+                const data = await response.json();
+                sttToken = data.token;
+                sttConfig = data.config;
+                console.log('✅ STT token obtained successfully');
+                return data;
+            } catch (error) {
+                console.error('❌ Error fetching STT token:', error);
+                return null;
+            }
+        }
+
+        // Initialize ElevenLabs STT WebSocket connection
+        async function initSTTWebSocket() {
+            try {
+                // Get fresh token if needed
+                if (!sttToken) {
+                    const tokenData = await fetchSTTToken();
+                    if (!tokenData) {
+                        throw new Error('Could not obtain STT token');
+                    }
+                }
+
+                // Close existing connection if any
+                if (sttWebsocket && sttWebsocket.readyState === WebSocket.OPEN) {
+                    sttWebsocket.close();
+                }
+
+                // Connect to ElevenLabs STT WebSocket with token in URL
+                const wsUrl = `wss://api.elevenlabs.io/v1/speech-to-text/realtime?model_id=scribe_v2_realtime&token=${sttToken}`;
+                sttWebsocket = new WebSocket(wsUrl);
+
+                sttWebsocket.onopen = () => {
+                    console.log('🎤 ElevenLabs STT WebSocket connected');
+
+                    // Send initial configuration
+                    sttWebsocket.send(JSON.stringify({
+                        type: 'config',
+                        audio_format: sttConfig?.audio_format || 'pcm_16000',
+                        sample_rate: sttConfig?.sample_rate || 16000,
+                        language_code: sttConfig?.language_code || 'en',
+                        commit_strategy: 'vad'  // Voice Activity Detection for auto-commit
+                    }));
+                };
+
+                sttWebsocket.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('🎤 STT message received:', JSON.stringify(data).substring(0, 200));
+
+                        if (data.type === 'error' || data.error) {
+                            console.error('❌ STT Error from server:', data);
+                            updateStatus('STT Error: ' + (data.error || data.message || 'Unknown'));
+                            return;
+                        }
+
+                        if (data.message_type === 'partial_transcript') {
+                            // Interim/partial transcription
+                            updateLiveTranscript(currentTranscript, data.text || '');
+                            const preview = (currentTranscript + (data.text || '')).substring(0, 50);
+                            updateStatus(`🎤 "${preview}${preview.length >= 50 ? '...' : ''}"`);
+                        } else if (data.message_type === 'committed_transcript') {
+                            // Final transcription for this segment
+                            currentTranscript += (data.text || '') + ' ';
+                            finalTranscriptReceived = true;
+                            updateLiveTranscript(currentTranscript, '');
+
+                            // Reset silence timer
+                            clearTimeout(silenceTimer);
+
+                            // Start silence detection
+                            if (currentTranscript.trim()) {
+                                console.log('⏱️ Starting silence timer...');
+                                silenceTimer = setTimeout(() => {
+                                    console.log('🤐 Silence detected, auto-sending message');
+                                    stopListeningAndSend();
+                                }, SILENCE_DELAY);
+                            }
+                        } else if (data.message_type === 'error') {
+                            console.error('❌ STT error:', data);
+                            updateStatus('STT Error: ' + (data.error || 'Unknown error'));
+                        }
+                    } catch (parseError) {
+                        console.error('❌ Error parsing STT message:', parseError, event.data);
+                    }
+                };
+
+                sttWebsocket.onerror = (error) => {
+                    console.error('❌ STT WebSocket error:', error);
+                    updateStatus('STT connection error');
+                };
+
+                sttWebsocket.onclose = (event) => {
+                    console.log('🎤 STT WebSocket closed:', event.code, event.reason);
+                    if (isListening) {
+                        // Token may have expired, get a new one
+                        sttToken = null;
+                    }
+                };
+
+                return true;
+            } catch (error) {
+                console.error('❌ Error initializing STT WebSocket:', error);
+                return false;
+            }
+        }
+
+        // Initialize microphone and audio processing
+        async function initMicrophone() {
+            try {
+                // Check if HTTPS (required for mic access except on localhost)
+                if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                    console.warn('⚠️ HTTPS required for microphone access');
+                    alert('Microphone access requires HTTPS.\n\nPlease access the app via HTTPS.');
+                    return false;
+                }
+
+                // Request microphone access
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 16000
+                    }
+                });
+
+                console.log('✅ Microphone access granted');
+
+                // Create audio context for processing
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                        sampleRate: 16000
+                    });
+                }
+
+                // Resume audio context if suspended
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+
+                return true;
+            } catch (error) {
+                console.error('❌ Error initializing microphone:', error);
+                if (error.name === 'NotAllowedError') {
+                    alert('Microphone access denied.\n\nPlease:\n1. Click the microphone icon in your browser\'s address bar\n2. Allow microphone access\n3. Refresh the page');
+                }
+                return false;
+            }
+        }
+
+        // Start audio capture and send to STT
+        async function startAudioCapture() {
+            if (!mediaStream || !sttWebsocket || sttWebsocket.readyState !== WebSocket.OPEN) {
+                console.error('❌ Cannot start audio capture: not ready');
+                console.log('mediaStream:', !!mediaStream);
+                console.log('sttWebsocket:', !!sttWebsocket);
+                console.log('sttWebsocket.readyState:', sttWebsocket?.readyState);
+                return;
+            }
+
+            try {
+                // Create a new AudioContext at 16kHz for ElevenLabs
+                const captureContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: 16000
+                });
+
+                if (captureContext.state === 'suspended') {
+                    await captureContext.resume();
+                }
+
+                console.log('🎤 AudioContext sample rate:', captureContext.sampleRate);
+
+                const source = captureContext.createMediaStreamSource(mediaStream);
+
+                // Use ScriptProcessorNode for audio processing
+                const bufferSize = 4096;
+                const scriptProcessor = captureContext.createScriptProcessor(bufferSize, 1, 1);
+
+                let chunkCount = 0;
+
+                scriptProcessor.onaudioprocess = (event) => {
+                    if (!isListening || !sttWebsocket || sttWebsocket.readyState !== WebSocket.OPEN) {
+                        return;
+                    }
+
+                    const inputData = event.inputBuffer.getChannelData(0);
+
+                    // Check if we're getting actual audio data
+                    let maxAmplitude = 0;
+                    for (let i = 0; i < inputData.length; i++) {
+                        maxAmplitude = Math.max(maxAmplitude, Math.abs(inputData[i]));
+                    }
+
+                    chunkCount++;
+                    if (chunkCount % 10 === 0) {
+                        console.log(`🎤 Audio chunk #${chunkCount}, max amplitude: ${maxAmplitude.toFixed(4)}`);
+                    }
+
+                    // Skip silent chunks (amplitude too low)
+                    if (maxAmplitude < 0.001) {
+                        return;
+                    }
+
+                    // Convert float32 to int16 PCM
+                    const pcmData = new Int16Array(inputData.length);
+                    for (let i = 0; i < inputData.length; i++) {
+                        const s = Math.max(-1, Math.min(1, inputData[i]));
+                        pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                    }
+
+                    // Convert to base64
+                    const base64Audio = arrayBufferToBase64(pcmData.buffer);
+
+                    // Send audio chunk to ElevenLabs
+                    try {
+                        sttWebsocket.send(JSON.stringify({
+                            message_type: 'input_audio_chunk',
+                            audio_base_64: base64Audio,
+                            commit: false,
+                            sample_rate: 16000
+                        }));
+                    } catch (sendError) {
+                        console.error('❌ Error sending audio chunk:', sendError);
+                    }
+                };
+
+                source.connect(scriptProcessor);
+                scriptProcessor.connect(captureContext.destination);
+
+                // Store for cleanup
+                audioWorkletNode = { source, scriptProcessor, captureContext };
+
+                console.log('🎤 Audio capture started successfully');
+            } catch (error) {
+                console.error('❌ Error starting audio capture:', error);
+            }
+        }
+
+        // Stop audio capture
+        function stopAudioCapture() {
+            if (audioWorkletNode) {
+                try {
+                    audioWorkletNode.source.disconnect();
+                    audioWorkletNode.scriptProcessor.disconnect();
+                    if (audioWorkletNode.captureContext) {
+                        audioWorkletNode.captureContext.close();
+                    }
+                } catch (e) {
+                    console.log('Audio nodes already disconnected:', e);
+                }
+                audioWorkletNode = null;
+            }
+            console.log('🎤 Audio capture stopped');
+        }
+
+        // Convert ArrayBuffer to Base64
+        function arrayBufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+
+        // Initialize Audio Context
+        function initAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // Connect WebSocket
+        function connectWebSocket() {
+            if (!jwtToken) {
+                console.error('No JWT token available');
+                updateStatus('No token available');
+                return;
+            }
+
+            const url = `${WS_URL}?token=${jwtToken}`;
+            updateStatus('Connecting...');
+
+            websocket = new WebSocket(url);
+
+            websocket.onopen = () => {
+                updateConnectionStatus(true);
+                updateStatus('Ready to chat!');
+            };
+
+            websocket.onmessage = async (event) => {
+                const data = JSON.parse(event.data);
+                console.log('Received:', data);
+
+                if (data.type === 'connection_ack') {
+                    console.log('Connected:', data.connection_id);
+                } else if (data.type === 'audio_chunk') {
+                    handleAudioChunk(data.audio);
+                } else if (data.type === 'audio_complete') {
+                    // Add agent's response to transcript
+                    if (data.message) {
+                        addToTranscript('Agent', data.message);
+                    }
+                    // Play the accumulated audio
+                    await playAudioQueue();
+                } else if (data.type === 'agent_response') {
+                    addToTranscript('Agent', data.message);
+                    updateStatus('Ready to chat!');
+                    setSphereState('idle');
+                } else if (data.type === 'error') {
+                    console.error('WebSocket error:', data.error);
+                    updateStatus('Error: ' + data.error);
+                    if (data.code === 'INVALID_TOKEN') {
+                        alert('Invalid token. Please enter a new one.');
+                        showSetup();
+                    }
+                }
+            };
+
+            websocket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                updateStatus('Connection error');
+                updateConnectionStatus(false);
+            };
+
+            websocket.onclose = () => {
+                updateConnectionStatus(false);
+                updateStatus('Disconnected');
+            };
+        }
+
+        // Handle audio chunk
+        function handleAudioChunk(base64Audio) {
+            const audioData = base64ToArrayBuffer(base64Audio);
+            audioQueue.push(audioData);
+        }
+
+        // Convert base64 to ArrayBuffer
+        function base64ToArrayBuffer(base64) {
+            const binaryString = window.atob(base64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        // Play audio queue
+        async function playAudioQueue() {
+            if (isPlayingAudio || audioQueue.length === 0) return;
+
+            isPlayingAudio = true;
+            setSphereState('speaking');
+            updateStatus('Agent speaking...');
+
+            try {
+                const totalLength = audioQueue.reduce((acc, arr) => acc + arr.byteLength, 0);
+                const concatenated = new Uint8Array(totalLength);
+                let offset = 0;
+                for (const chunk of audioQueue) {
+                    concatenated.set(new Uint8Array(chunk), offset);
+                    offset += chunk.byteLength;
+                }
+
+                const audioBuffer = await audioContext.decodeAudioData(concatenated.buffer);
+                const source = audioContext.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(audioContext.destination);
+
+                source.onended = () => {
+                    isPlayingAudio = false;
+                    audioQueue = [];
+                    setSphereState('idle');
+                    updateStatus('Ready to chat!');
+                };
+
+                source.start(0);
+            } catch (error) {
+                console.error('Error playing audio:', error);
+                isPlayingAudio = false;
+                audioQueue = [];
+                setSphereState('idle');
+                updateStatus('Error playing audio');
+            }
+        }
+
+        // Sphere interaction
+        document.getElementById('sphereContainer').addEventListener('click', () => {
+            if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+                updateStatus('Please wait, connecting...');
+                return;
+            }
+
+            if (isListening) {
+                // Manual stop - send immediately
+                stopListeningAndSend();
+            } else {
+                startListening();
+            }
+        });
+
+        // Start listening with ElevenLabs STT
+        async function startListening() {
+            try {
+                // Initialize microphone if not already done
+                if (!mediaStream) {
+                    const micReady = await initMicrophone();
+                    if (!micReady) {
+                        updateStatus('Could not access microphone');
+                        return;
+                    }
+                }
+
+                // Initialize STT WebSocket
+                const sttReady = await initSTTWebSocket();
+                if (!sttReady) {
+                    updateStatus('Could not connect to STT service');
+                    return;
+                }
+
+                // Wait for WebSocket to be ready
+                await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => reject(new Error('STT connection timeout')), 5000);
+
+                    const checkReady = setInterval(() => {
+                        if (sttWebsocket && sttWebsocket.readyState === WebSocket.OPEN) {
+                            clearInterval(checkReady);
+                            clearTimeout(timeout);
+                            resolve();
+                        }
+                    }, 100);
+                });
+
+                isListening = true;
+                currentTranscript = '';
+                finalTranscriptReceived = false;
+                clearTimeout(silenceTimer);
+                setSphereState('listening');
+                updateStatus('🎤 Listening... (will auto-send after silence)');
+
+                // Initialize live transcript display
+                updateLiveTranscript('', '');
+
+                // Start capturing audio
+                await startAudioCapture();
+
+                console.log('🎤 ElevenLabs STT listening started');
+            } catch (error) {
+                console.error('❌ Error starting listening:', error);
+                updateStatus('Error starting microphone');
+                setSphereState('idle');
+                isListening = false;
+            }
+        }
+
+        // Stop listening and send message
+        function stopListeningAndSend() {
+            clearTimeout(silenceTimer);
+
+            // Stop audio capture
+            stopAudioCapture();
+
+            // Send commit signal to STT
+            if (sttWebsocket && sttWebsocket.readyState === WebSocket.OPEN) {
+                sttWebsocket.send(JSON.stringify({
+                    message_type: 'input_audio_chunk',
+                    audio_base_64: '',
+                    commit: true,
+                    sample_rate: 16000
+                }));
+            }
+
+            isListening = false;
+
+            // Close STT WebSocket
+            if (sttWebsocket) {
+                sttWebsocket.close();
+                sttWebsocket = null;
+            }
+
+            if (currentTranscript.trim()) {
+                sendMessage(currentTranscript.trim());
+            } else {
+                updateStatus('No speech detected');
+                setSphereState('idle');
+            }
+        }
+
+        // Stop listening (without sending)
+        function stopListening() {
+            clearTimeout(silenceTimer);
+
+            // Stop audio capture
+            stopAudioCapture();
+
+            isListening = false;
+
+            // Close STT WebSocket
+            if (sttWebsocket) {
+                sttWebsocket.close();
+                sttWebsocket = null;
+            }
+        }
+
+        // Send message to agent
+        function sendMessage(message) {
+            if (!message.trim()) {
+                updateStatus('No speech detected');
+                setSphereState('idle');
+                return;
+            }
+
+            addToTranscript('You', message);
+            updateStatus('Thinking...');
+            setSphereState('thinking');
+
+            const payload = {
+                message: message,
+                context: {},
+                session_id: null,
+                stream_audio: true
+            };
+
+            websocket.send(JSON.stringify(payload));
+            currentTranscript = '';
+        }
+
+        // Update sphere state
+        function setSphereState(state) {
+            const sphere = document.getElementById('sphere');
+            sphere.className = 'sphere';
+            if (state !== 'idle') {
+                sphere.classList.add(state);
+            }
+        }
+
+        // Update status text
+        function updateStatus(text) {
+            document.getElementById('statusText').textContent = text;
+        }
+
+        // Update connection status
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            if (connected) {
+                status.textContent = '● Connected';
+                status.className = 'connection-status connected';
+            } else {
+                status.textContent = '● Disconnected';
+                status.className = 'connection-status disconnected';
+            }
+        }
+
+        // Update live transcript while speaking
+        function updateLiveTranscript(finalText, interimText) {
+            const transcript = document.getElementById('transcript');
+
+            // Remove placeholder if exists
+            if (transcript.querySelector('div[style*="color: #999"]')) {
+                transcript.innerHTML = '';
+            }
+
+            // Remove existing live transcript item
+            const existingLive = transcript.querySelector('.live-transcript-item');
+            if (existingLive) {
+                existingLive.remove();
+            }
+
+            // Create live transcript item
+            const item = document.createElement('div');
+            item.className = 'transcript-item live-transcript-item';
+            item.innerHTML = `
+                <div class="user-message">
+                    <strong>You:</strong>
+                    <span class="final-text">${finalText}</span>
+                    <span class="interim-text" style="opacity: 0.6; font-style: italic;">${interimText}</span>
+                    <span class="listening-indicator" style="color: #38ef7d; margin-left: 8px;">●</span>
+                </div>
+            `;
+
+            transcript.appendChild(item);
+            transcript.scrollTop = transcript.scrollHeight;
+        }
+
+        // Add message to transcript
+        function addToTranscript(sender, message) {
+            const transcript = document.getElementById('transcript');
+
+            // Remove placeholder if exists
+            if (transcript.querySelector('div[style*="color: #999"]')) {
+                transcript.innerHTML = '';
+            }
+
+            // Remove live transcript if exists (replace with final)
+            const existingLive = transcript.querySelector('.live-transcript-item');
+            if (existingLive) {
+                existingLive.remove();
+            }
+
+            const item = document.createElement('div');
+            item.className = 'transcript-item';
+
+            const senderClass = sender === 'You' ? 'user-message' : 'agent-message';
+            item.innerHTML = `
+                <div class="${senderClass}"><strong>${sender}:</strong> ${message}</div>
+            `;
+
+            transcript.appendChild(item);
+            transcript.scrollTop = transcript.scrollHeight;
+        }
+
+        // Audio visualization
+        const canvas = document.getElementById('visualizer');
+        const ctx = canvas.getContext('2d');
+
+        function drawVisualization() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (isListening) {
+                const time = Date.now() / 1000;
+                const radius = 50 + Math.sin(time * 3) * 10;
+
+                ctx.beginPath();
+                ctx.arc(100, 100, radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(56, 239, 125, 0.3)';
+                ctx.fill();
+            } else if (isSpeaking) {
+                const bars = 8;
+                const barWidth = 4;
+                const spacing = 20;
+                const time = Date.now() / 100;
+
+                for (let i = 0; i < bars; i++) {
+                    const height = 20 + Math.sin(time + i) * 15;
+                    const x = 100 - (bars * spacing) / 2 + i * spacing;
+                    const y = 100 - height / 2;
+
+                    ctx.fillStyle = 'rgba(245, 87, 108, 0.5)';
+                    ctx.fillRect(x, y, barWidth, height);
+                }
+            }
+
+            requestAnimationFrame(drawVisualization);
+        }
+
+        drawVisualization();
+    </script>
+</body>
+</html>

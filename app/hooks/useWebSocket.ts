@@ -1,0 +1,162 @@
+'use client';
+
+import { useCallback, useRef, useEffect } from 'react';
+import { useVoiceAgent } from '../contexts/VoiceAgentContext';
+import type { WSMessage } from '../types';
+
+interface UseWebSocketOptions {
+  onAudioChunk?: (audio: string) => void;
+  onAudioComplete?: (message?: string) => void;
+  onAgentResponse?: (message: string) => void;
+  onError?: (error: string, code?: string) => void;
+}
+
+export function useWebSocket(options: UseWebSocketOptions = {}) {
+  const {
+    jwtToken,
+    setConnectionStatus,
+    setSphereState,
+    addMessage,
+    setStatusText,
+    setIsSetup,
+  } = useVoiceAgent();
+
+  const websocketRef = useRef<WebSocket | null>(null);
+  const { onAudioChunk, onAudioComplete, onAgentResponse, onError } = options;
+
+  const getWsUrl = useCallback(() => {
+    const wsProtocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = typeof window !== 'undefined' ? window.location.host : '';
+    return `${wsProtocol}//${host}/agent/ws`;
+  }, []);
+
+  const connect = useCallback(() => {
+    if (!jwtToken) {
+      console.error('No JWT token available');
+      setStatusText('No token available');
+      return;
+    }
+
+    const url = `${getWsUrl()}?token=${jwtToken}`;
+    setStatusText('Connecting...');
+    setConnectionStatus('connecting');
+
+    const ws = new WebSocket(url);
+    websocketRef.current = ws;
+
+    ws.onopen = () => {
+      setConnectionStatus('connected');
+      setStatusText('Ready to chat!');
+      console.log('WebSocket connected');
+    };
+
+    ws.onmessage = async (event) => {
+      try {
+        const data: WSMessage = JSON.parse(event.data);
+        console.log('Received:', data);
+
+        switch (data.type) {
+          case 'connection_ack':
+            console.log('Connected:', data.connection_id);
+            break;
+
+          case 'audio_chunk':
+            onAudioChunk?.(data.audio);
+            break;
+
+          case 'audio_complete':
+            if (data.message) {
+              addMessage({ sender: 'agent', message: data.message });
+            }
+            onAudioComplete?.(data.message);
+            break;
+
+          case 'agent_response':
+            addMessage({ sender: 'agent', message: data.message });
+            setStatusText('Ready to chat!');
+            setSphereState('idle');
+            onAgentResponse?.(data.message);
+            break;
+
+          case 'error':
+            console.error('WebSocket error:', data.error);
+            setStatusText(`Error: ${data.error}`);
+            if (data.code === 'INVALID_TOKEN') {
+              alert('Invalid token. Please enter a new one.');
+              setIsSetup(false);
+            }
+            onError?.(data.error, data.code);
+            break;
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      setStatusText('Connection error');
+      setConnectionStatus('disconnected');
+    };
+
+    ws.onclose = () => {
+      setConnectionStatus('disconnected');
+      setStatusText('Disconnected');
+      console.log('WebSocket disconnected');
+    };
+  }, [
+    jwtToken,
+    getWsUrl,
+    setConnectionStatus,
+    setSphereState,
+    addMessage,
+    setStatusText,
+    setIsSetup,
+    onAudioChunk,
+    onAudioComplete,
+    onAgentResponse,
+    onError,
+  ]);
+
+  const disconnect = useCallback(() => {
+    if (websocketRef.current) {
+      websocketRef.current.close();
+      websocketRef.current = null;
+    }
+  }, []);
+
+  const sendMessage = useCallback((message: string) => {
+    if (!websocketRef.current || websocketRef.current.readyState !== WebSocket.OPEN) {
+      console.error('WebSocket not connected');
+      return false;
+    }
+
+    const payload = {
+      message,
+      context: {},
+      session_id: null,
+      stream_audio: true,
+    };
+
+    websocketRef.current.send(JSON.stringify(payload));
+    return true;
+  }, []);
+
+  const isConnected = useCallback(() => {
+    return websocketRef.current?.readyState === WebSocket.OPEN;
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      disconnect();
+    };
+  }, [disconnect]);
+
+  return {
+    connect,
+    disconnect,
+    sendMessage,
+    isConnected,
+  };
+}
