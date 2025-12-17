@@ -13,6 +13,7 @@ export const config = {
 
   // Full URLs
   get wsUrl() {
+
     return `${this.wsBaseUrl}${this.endpoints.agentWs}`;
   },
 

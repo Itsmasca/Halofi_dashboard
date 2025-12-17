@@ -17,6 +17,11 @@ export function useAudioCapture(options: AudioCaptureOptions = {}) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const isCapturingRef = useRef(false);
+  const onAudioDataRef = useRef(onAudioData);
+
+  // Keep refs updated
+  onAudioDataRef.current = onAudioData;
 
   // Convert ArrayBuffer to Base64
   const arrayBufferToBase64 = useCallback((buffer: ArrayBuffer): string => {
@@ -87,7 +92,8 @@ export function useAudioCapture(options: AudioCaptureOptions = {}) {
       scriptProcessorRef.current = audioContextRef.current.createScriptProcessor(bufferSize, 1, 1);
 
       scriptProcessorRef.current.onaudioprocess = (event) => {
-        if (!isCapturing) return;
+        // Use ref to get current capturing state (avoids closure issues)
+        if (!isCapturingRef.current) return;
 
         const inputData = event.inputBuffer.getChannelData(0);
 
@@ -109,13 +115,14 @@ export function useAudioCapture(options: AudioCaptureOptions = {}) {
 
         // Convert to base64 and send
         const base64Audio = arrayBufferToBase64(pcmData.buffer);
-        onAudioData?.(base64Audio);
+        onAudioDataRef.current?.(base64Audio);
       };
 
       // Connect nodes
       sourceRef.current.connect(scriptProcessorRef.current);
       scriptProcessorRef.current.connect(audioContextRef.current.destination);
 
+      isCapturingRef.current = true;
       setIsCapturing(true);
       setError(null);
       console.log('Audio capture started');
@@ -125,11 +132,13 @@ export function useAudioCapture(options: AudioCaptureOptions = {}) {
       setError('Error starting audio capture');
       return false;
     }
-  }, [sampleRate, arrayBufferToBase64, onAudioData, isCapturing, requestMicrophoneAccess]);
+  }, [sampleRate, arrayBufferToBase64, requestMicrophoneAccess]);
 
   // Stop audio capture
   const stopCapture = useCallback(() => {
     try {
+      isCapturingRef.current = false;
+
       if (sourceRef.current) {
         sourceRef.current.disconnect();
         sourceRef.current = null;

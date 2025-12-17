@@ -72,8 +72,9 @@ export function useSTT(options: UseSTTOptions = {}) {
         sttWebsocketRef.current.close();
       }
 
-      // Connect to ElevenLabs STT WebSocket
-      const wsUrl = `wss://api.elevenlabs.io/v1/speech-to-text/realtime?model_id=scribe_v2_realtime&token=${sttTokenRef.current}`;
+      // Connect to ElevenLabs STT WebSocket - config via query params
+      const languageCode = sttConfigRef.current?.language_code || 'en';
+      const wsUrl = `wss://api.elevenlabs.io/v1/speech-to-text/realtime?model_id=scribe_v2_realtime&token=${sttTokenRef.current}&sample_rate=16000&language_code=${languageCode}`;
       sttWebsocketRef.current = new WebSocket(wsUrl);
 
       return new Promise((resolve) => {
@@ -81,18 +82,7 @@ export function useSTT(options: UseSTTOptions = {}) {
 
         ws.onopen = () => {
           console.log('ElevenLabs STT WebSocket connected');
-
-          // Send initial configuration
-          ws.send(
-            JSON.stringify({
-              type: 'config',
-              audio_format: sttConfigRef.current?.audio_format || 'pcm_16000',
-              sample_rate: sttConfigRef.current?.sample_rate || 16000,
-              language_code: sttConfigRef.current?.language_code || 'en',
-              commit_strategy: 'vad',
-            })
-          );
-
+          // No config message needed - configuration is in URL query params
           resolve(true);
         };
 
