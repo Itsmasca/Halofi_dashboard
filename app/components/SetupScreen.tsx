@@ -51,6 +51,8 @@ export function SetupScreen() {
 
       // Extract token from response (nested in session object)
       const token = data.session?.access_token || data.access_token || data.token;
+      console.log('Login response data:', data);
+      console.log('Extracted token (first 50 chars):', token?.substring(0, 50));
       if (!token) {
         throw new Error('No token received from server');
       }

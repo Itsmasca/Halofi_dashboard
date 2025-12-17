@@ -25,9 +25,23 @@ const VoiceAgentContext = createContext<VoiceAgentContextType | null>(null);
 export function VoiceAgentProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<VoiceAgentState>(initialState);
 
-  // Clean token - remove quotes if present
+  // Clean token - remove quotes, whitespace, and any wrapping characters
   const cleanToken = (token: string): string => {
-    return token.replace(/^["']|["']$/g, '').trim();
+    let cleaned = token.trim();
+    // Remove surrounding quotes (single or double)
+    cleaned = cleaned.replace(/^["']+|["']+$/g, '');
+    // Remove any remaining whitespace
+    cleaned = cleaned.trim();
+    // If it still starts with a non-alphanumeric character that's not part of JWT, remove it
+    // JWT tokens always start with 'eyJ'
+    if (cleaned && !cleaned.startsWith('eyJ')) {
+      // Find where the actual token starts
+      const jwtStart = cleaned.indexOf('eyJ');
+      if (jwtStart > 0) {
+        cleaned = cleaned.substring(jwtStart);
+      }
+    }
+    return cleaned;
   };
 
   // Check for saved token on mount
@@ -49,7 +63,9 @@ export function VoiceAgentProvider({ children }: { children: React.ReactNode }) 
 
   const setJwtToken = useCallback((token: string | null) => {
     if (token) {
+      console.log('Original token (first 50 chars):', token.substring(0, 50));
       const cleaned = cleanToken(token);
+      console.log('Cleaned token (first 50 chars):', cleaned.substring(0, 50));
       localStorage.setItem('halofi_jwt', cleaned);
       setState(prev => ({ ...prev, jwtToken: cleaned }));
     } else {
