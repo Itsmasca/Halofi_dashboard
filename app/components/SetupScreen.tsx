@@ -49,8 +49,8 @@ export function SetupScreen() {
         throw new Error(data.detail || data.message || 'Login failed');
       }
 
-      // Extract token from response
-      const token = data.access_token || data.token;
+      // Extract token from response (nested in session object)
+      const token = data.session?.access_token || data.access_token || data.token;
       if (!token) {
         throw new Error('No token received from server');
       }
