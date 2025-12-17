@@ -23,12 +23,22 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   } = useVoiceAgent();
 
   const websocketRef = useRef<WebSocket | null>(null);
-  const { onAudioChunk, onAudioComplete, onAgentResponse, onError } = options;
+
+  // Use refs for callbacks to avoid reconnections
+  const callbacksRef = useRef(options);
+  callbacksRef.current = options;
 
   // WebSocket URL from config (uses environment variables)
   const WS_URL = config.wsUrl;
 
   const connect = useCallback(() => {
+    // Prevent multiple connections
+    if (websocketRef.current?.readyState === WebSocket.OPEN ||
+        websocketRef.current?.readyState === WebSocket.CONNECTING) {
+      console.log('WebSocket already connected or connecting');
+      return;
+    }
+
     if (!jwtToken) {
       console.error('No JWT token available');
       setStatusText('No token available');
@@ -36,6 +46,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     }
 
     const url = `${WS_URL}?token=${jwtToken}`;
+    console.log('Connecting to WebSocket:', url);
     setStatusText('Connecting...');
     setConnectionStatus('connecting');
 
@@ -59,21 +70,21 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
             break;
 
           case 'audio_chunk':
-            onAudioChunk?.(data.audio);
+            callbacksRef.current.onAudioChunk?.(data.audio);
             break;
 
           case 'audio_complete':
             if (data.message) {
               addMessage({ sender: 'agent', message: data.message });
             }
-            onAudioComplete?.(data.message);
+            callbacksRef.current.onAudioComplete?.(data.message);
             break;
 
           case 'agent_response':
             addMessage({ sender: 'agent', message: data.message });
             setStatusText('Ready to chat!');
             setSphereState('idle');
-            onAgentResponse?.(data.message);
+            callbacksRef.current.onAgentResponse?.(data.message);
             break;
 
           case 'error':
@@ -83,7 +94,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
               alert('Invalid token. Please enter a new one.');
               setIsSetup(false);
             }
-            onError?.(data.error, data.code);
+            callbacksRef.current.onError?.(data.error, data.code);
             break;
         }
       } catch (error) {
@@ -102,19 +113,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       setStatusText('Disconnected');
       console.log('WebSocket disconnected');
     };
-  }, [
-    jwtToken,
-    WS_URL,
-    setConnectionStatus,
-    setSphereState,
-    addMessage,
-    setStatusText,
-    setIsSetup,
-    onAudioChunk,
-    onAudioComplete,
-    onAgentResponse,
-    onError,
-  ]);
+  }, [jwtToken, WS_URL, setConnectionStatus, setSphereState, addMessage, setStatusText, setIsSetup]);
 
   const disconnect = useCallback(() => {
     if (websocketRef.current) {

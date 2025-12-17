@@ -8,6 +8,7 @@ export const config = {
   endpoints: {
     agentWs: '/agent/ws',
     sttToken: '/agent/stt/token',
+    login: '/auth/login',
   },
 
   // Full URLs
@@ -17,5 +18,9 @@ export const config = {
 
   get sttTokenUrl() {
     return `${this.apiBaseUrl}${this.endpoints.sttToken}`;
+  },
+
+  get loginUrl() {
+    return `${this.apiBaseUrl}${this.endpoints.login}`;
   },
 };

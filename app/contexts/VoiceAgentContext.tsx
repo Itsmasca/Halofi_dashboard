@@ -25,13 +25,23 @@ const VoiceAgentContext = createContext<VoiceAgentContextType | null>(null);
 export function VoiceAgentProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<VoiceAgentState>(initialState);
 
+  // Clean token - remove quotes if present
+  const cleanToken = (token: string): string => {
+    return token.replace(/^["']|["']$/g, '').trim();
+  };
+
   // Check for saved token on mount
   useEffect(() => {
     const savedToken = localStorage.getItem('halofi_jwt');
     if (savedToken) {
+      const cleaned = cleanToken(savedToken);
+      // Re-save if it was dirty
+      if (cleaned !== savedToken) {
+        localStorage.setItem('halofi_jwt', cleaned);
+      }
       setState(prev => ({
         ...prev,
-        jwtToken: savedToken,
+        jwtToken: cleaned,
         isSetup: true,
       }));
     }
@@ -39,11 +49,13 @@ export function VoiceAgentProvider({ children }: { children: React.ReactNode }) 
 
   const setJwtToken = useCallback((token: string | null) => {
     if (token) {
-      localStorage.setItem('halofi_jwt', token);
+      const cleaned = cleanToken(token);
+      localStorage.setItem('halofi_jwt', cleaned);
+      setState(prev => ({ ...prev, jwtToken: cleaned }));
     } else {
       localStorage.removeItem('halofi_jwt');
+      setState(prev => ({ ...prev, jwtToken: null }));
     }
-    setState(prev => ({ ...prev, jwtToken: token }));
   }, []);
 
   const setIsSetup = useCallback((isSetup: boolean) => {

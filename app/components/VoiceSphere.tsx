@@ -22,6 +22,7 @@ export function VoiceSphere() {
 
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isListeningRef = useRef(false);
+  const hasConnectedRef = useRef(false);
 
   // Audio playback hook
   const { addAudioChunk, playQueue, isPlaying } = useAudioPlayback({
@@ -70,9 +71,12 @@ export function VoiceSphere() {
     },
   });
 
-  // Connect WebSocket on mount
+  // Connect WebSocket on mount (only once)
   useEffect(() => {
-    connect();
+    if (!hasConnectedRef.current) {
+      hasConnectedRef.current = true;
+      connect();
+    }
   }, [connect]);
 
   // Handle stop listening and send
