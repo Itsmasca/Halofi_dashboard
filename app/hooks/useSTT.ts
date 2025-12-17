@@ -181,14 +181,17 @@ export function useSTT(options: UseSTTOptions = {}) {
     }
 
     try {
-      sttWebsocketRef.current.send(
-        JSON.stringify({
-          message_type: 'input_audio_chunk',
-          audio_base_64: base64Audio,
-          commit,
-          sample_rate: 16000,
-        })
-      );
+      if (commit) {
+        // Send end of stream signal
+        sttWebsocketRef.current.send(JSON.stringify({ eof: true }));
+      } else {
+        // Send audio chunk - ElevenLabs expects just { audio: base64 }
+        sttWebsocketRef.current.send(
+          JSON.stringify({
+            audio: base64Audio,
+          })
+        );
+      }
       return true;
     } catch (err) {
       console.error('Error sending audio chunk:', err);
